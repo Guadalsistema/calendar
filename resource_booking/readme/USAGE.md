@@ -41,3 +41,10 @@ To invite someone to book a resource combination from the portal:
 9.  Click on *Share \> Send*.
 10. The requester will receive an email to select a calendar slot from
     his portal.
+
+When *Auto assign* is left enabled, the requester may select any of the
+booking type's resource combinations from the portal schedule before choosing
+an available slot. *Any available combination* keeps automatic assignment.
+An explicitly selected combination is checked again when confirming the slot.
+If the organizer disables *Auto assign* and selects a combination, requesters
+cannot change it.

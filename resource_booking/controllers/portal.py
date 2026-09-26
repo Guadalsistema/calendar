@@ -2,8 +2,6 @@
 # Copyright 2022 Tecnativa - Pedro M. Baeza
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from datetime import datetime
-
 from dateutil.parser import isoparse
 
 from odoo.exceptions import AccessError, MissingError, ValidationError
@@ -104,17 +102,30 @@ class CustomerPortal(portal.CustomerPortal):
         website=True,
     )
     def portal_booking_schedule(
-        self, booking_id, access_token=None, year=None, month=None, error=None, **kwargs
+        self,
+        booking_id,
+        access_token=None,
+        year=None,
+        month=None,
+        error=None,
+        combination_id=None,
+        **kwargs,
     ):
         """Portal booking scheduling."""
         try:
             booking_sudo = self._get_booking_sudo(booking_id, access_token)
         except (AccessError, MissingError):
             return request.redirect("/my")
+        try:
+            combination = booking_sudo._get_selectable_combination(combination_id)
+        except ValidationError:
+            raise request.not_found() from None
         values = self._booking_get_page_view_values(
             booking_sudo, access_token, **kwargs
         )
-        values.update(booking_sudo._get_calendar_context(year, month))
+        values.update(
+            booking_sudo._get_calendar_context(year, month, combination=combination)
+        )
         values.update({"error": error, "page_name": "booking_schedule"})
         return request.render(
             "resource_booking.resource_booking_portal_schedule", values
@@ -138,18 +149,19 @@ class CustomerPortal(portal.CustomerPortal):
         type="http",
         website=True,
     )
-    def portal_booking_confirm(self, booking_id, access_token, when, **kwargs):
+    def portal_booking_confirm(
+        self, booking_id, access_token, when, combination_id=None, **kwargs
+    ):
         """Confirm a booking in a given datetime."""
         booking_sudo = self._get_booking_sudo(booking_id, access_token)
         when_tz_aware = isoparse(when)
-        when_naive = datetime.utcfromtimestamp(when_tz_aware.timestamp())
         try:
-            booking_sudo.start = when_naive
-        except ValidationError as error:
+            with request.env.cr.savepoint():
+                booking_sudo._confirm_portal_slot(when_tz_aware, combination_id)
+        except ValidationError:
             url = booking_sudo.get_portal_url(
                 suffix=f"/schedule/{when_tz_aware:%Y/%m}",
-                query_string=f"&error={error.args[0]}",
+                query_string="&error=The chosen schedule is no longer available.",
             )
             return request.redirect(url)
-        booking_sudo.action_confirm()
         return request.redirect(booking_sudo.get_portal_url())
