@@ -5,6 +5,7 @@
 
 import calendar
 from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 
 from dateutil.relativedelta import relativedelta
 from pytz import timezone
@@ -480,7 +481,7 @@ class ResourceBooking(models.Model):
                 )
             )
 
-    def _get_calendar_context(self, year=None, month=None, now=None):
+    def _get_calendar_context(self, year=None, month=None, now=None, combination=None):
         """Get the required context for the calendar view in the portal.
 
         See the `resource_booking.scheduling_calendar` view.
@@ -488,6 +489,7 @@ class ResourceBooking(models.Model):
         :param int year: Year of the calendar to be displayed.
         :param int month: Month of the calendar to be displayed.
         :param datetime now: Represents the current datetime.
+        :param combination: An explicitly selected resource combination, if any.
         """
         month1 = relativedelta(months=1)
         now = fields.Datetime.context_timestamp(self, now or fields.Datetime.now())
@@ -505,7 +507,9 @@ class ResourceBooking(models.Model):
         lang = self.env["res.lang"]._lang_get(self.env.lang or self.env.user.lang)
         weekday_names = dict(lang.fields_get(["week_start"])["week_start"]["selection"])
         booking_duration = timedelta(hours=self.duration)
-        slots = self._get_available_slots(start, start + month1 + booking_duration)
+        slots = self._get_available_slots(
+            start, start + month1 + booking_duration, combination=combination
+        )
         return {
             "booking": self,
             "calendar": calendar.Calendar(int(lang.week_start) - 1),
@@ -514,7 +518,57 @@ class ResourceBooking(models.Model):
             "slots": slots,
             "start": start,
             "weekday_names": weekday_names,
+            "selected_combination": combination,
         }
+
+    def _get_selectable_combination(self, combination_id):
+        """Validate a requester's choice against this booking's type and policy."""
+        self.ensure_one()
+        Combination = self.env["resource.booking.combination"]
+        if not combination_id:
+            return Combination
+        try:
+            combination = Combination.browse(int(combination_id)).exists()
+        except (TypeError, ValueError):
+            combination = Combination
+        if (
+            not self.combination_auto_assign
+            or not self.is_modifiable
+            or combination
+            not in self.type_id.combination_rel_ids.mapped("combination_id")
+        ):
+            raise ValidationError(self.env._("Invalid resource combination."))
+        return combination
+
+    def _confirm_portal_slot(self, when, combination_id=None):
+        """Schedule a portal choice after checking its current availability."""
+        self.ensure_one()
+        if when.tzinfo is None:
+            raise ValidationError(self.env._("Invalid booking date."))
+        combination = self._get_selectable_combination(combination_id)
+        local_when = when.astimezone(timezone(self.type_id.resource_calendar_id.tz))
+        slots = self._get_available_slots(
+            local_when,
+            local_when + timedelta(hours=self.duration),
+            combination=combination,
+        )
+        if not self.is_modifiable or local_when not in slots.get(local_when.date(), []):
+            raise ValidationError(
+                self.env._("The chosen schedule is no longer available.")
+            )
+        self.write(
+            {
+                "start": datetime.fromtimestamp(
+                    when.timestamp(), tz=dt_timezone.utc
+                ).replace(tzinfo=None),
+                **(
+                    {"combination_auto_assign": False, "combination_id": combination.id}
+                    if combination
+                    else {}
+                ),
+            }
+        )
+        self.action_confirm()
 
     @api.model
     def _get_name_formatted(self, partner, type_, meeting=None):
@@ -552,9 +606,11 @@ class ResourceBooking(models.Model):
                 )
             )
 
-    def _get_available_slots(self, start_dt, end_dt):
+    def _get_available_slots(self, start_dt, end_dt, combination=None):
         """Return available slots for scheduling current booking."""
         result = {}
+        if not combination and self.combination_auto_assign:
+            combination = self.type_id.combination_rel_ids.mapped("combination_id")
         slot_duration = timedelta(hours=self.type_id.slot_duration)
         booking_duration = timedelta(hours=self.duration)
         now = fields.Datetime.context_timestamp(self, fields.Datetime.now())
@@ -564,7 +620,9 @@ class ResourceBooking(models.Model):
         # available_intervals should start with the beginning of the work day,
         # to compute each slot based on the beginning of the work day.
         workday_min = start_dt.replace(hour=0, minute=0, second=0, microsecond=0)
-        available_intervals = self._get_intervals(workday_min, end_dt)
+        available_intervals = self._get_intervals(
+            workday_min, end_dt, combination=combination
+        )
         available_intervals = _merge_intervals(available_intervals)
         # Loop through available times and append tested start/stop to the result.
         test_start = False
