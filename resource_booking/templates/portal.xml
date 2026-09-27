@@ -13,6 +13,7 @@
     - res_lang: res.lang record for current context l10n
     - slots: available slots, as returned from [resource.booking]._get_available_slots()
     - start: datetime when we start displaying the calendar
+    - month_label: localized month and year shown in the calendar heading
     - weekday_names: dict of mappings between weekday numbers and names, where MON=1
      -->
     <template id="scheduling_calendar" name="Resource Booking Calendar">
@@ -80,7 +81,7 @@
                             <th
                                 class="align-middle"
                                 colspan="5"
-                                t-out="start.strftime('%B %Y')"
+                                t-out="month_label"
                             />
                             <th class="text-end">
                                 <a
@@ -379,6 +380,7 @@
     </template>
     <template id="resource_booking_portal_form" name="Booking portal form">
         <t t-call="portal.portal_layout">
+            <t t-set="additional_title" t-value="booking_sudo.type_id.name" />
             <t t-set="o_portal_fullwidth_alert" groups="resource_booking.group_user">
                 <t t-call="portal.portal_back_in_edit_mode">
                     <t
@@ -603,6 +605,7 @@
     </template>
     <template id="resource_booking_portal_schedule" name="Resource Booking Scheduling">
         <t t-call="portal.portal_layout">
+            <t t-set="additional_title" t-value="booking_sudo.type_id.name" />
             <t t-set="o_portal_fullwidth_alert" groups="resource_booking.group_user">
                 <t t-call="portal.portal_back_in_edit_mode">
                     <t

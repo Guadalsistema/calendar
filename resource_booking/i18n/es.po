@@ -1370,6 +1370,56 @@ msgstr ""
 msgid "because you belong to the chosen resource combination:"
 msgstr "porque pertenece a la combinación de recursos elegida:"
 
+#. module: resource_booking
+#: model_terms:ir.ui.view,arch_db:resource_booking.resource_booking_portal_header
+msgid "<small class=\"text-end\">Stage:</small>"
+msgstr "<small class=\"text-end\">Estado:</small>"
+
+#. module: resource_booking
+#: model_terms:ir.ui.view,arch_db:resource_booking.scheduling_calendar
+msgid "<strong>Choose resources:</strong>"
+msgstr "<strong>Selecciona los recursos:</strong>"
+
+#. module: resource_booking
+#: model:ir.model,name:resource_booking.model_mail_activity_schedule
+msgid "Activity schedule plan Wizard"
+msgstr "Asistente de planificación de actividades"
+
+#. module: resource_booking
+#: model_terms:ir.ui.view,arch_db:resource_booking.scheduling_calendar
+msgid "Any available combination"
+msgstr "Cualquier combinación disponible"
+
+#. module: resource_booking
+#. odoo-python
+#: code:addons/resource_booking/models/resource_booking.py:0
+msgid "Invalid booking date."
+msgstr "Fecha de reserva no válida."
+
+#. module: resource_booking
+#. odoo-python
+#: code:addons/resource_booking/models/resource_booking.py:0
+msgid "Invalid resource combination."
+msgstr "Combinación de recursos no válida."
+
+#. module: resource_booking
+#: model_terms:ir.ui.view,arch_db:resource_booking.scheduling_calendar
+msgid "Resources:"
+msgstr "Recursos:"
+
+#. module: resource_booking
+#: model:ir.model.fields,field_description:resource_booking.field_resource_booking__message_has_sms_error
+#: model:ir.model.fields,field_description:resource_booking.field_resource_booking_type__message_has_sms_error
+msgid "SMS Delivery error"
+msgstr "Error de entrega de SMS"
+
+#. module: resource_booking
+#. odoo-python
+#: code:addons/resource_booking/controllers/portal.py:0
+#: code:addons/resource_booking/models/resource_booking.py:0
+msgid "The chosen schedule is no longer available."
+msgstr "El horario elegido ya no está disponible."
+
 #~ msgid "Last Modified on"
 #~ msgstr "Última modificación en"
 
