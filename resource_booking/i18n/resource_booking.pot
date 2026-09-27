@@ -1271,3 +1271,43 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:resource_booking.message_combination_assigned
 msgid "because you belong to the chosen resource combination:"
 msgstr ""
+
+#. module: resource_booking
+#: model_terms:ir.ui.view,arch_db:resource_booking.scheduling_calendar
+msgid "<strong>Choose resources:</strong>"
+msgstr ""
+
+#. module: resource_booking
+#: model_terms:ir.ui.view,arch_db:resource_booking.scheduling_calendar
+msgid "Any available combination"
+msgstr ""
+
+#. module: resource_booking
+#. odoo-python
+#: code:addons/resource_booking/models/resource_booking.py:0
+msgid "Invalid booking date."
+msgstr ""
+
+#. module: resource_booking
+#. odoo-python
+#: code:addons/resource_booking/models/resource_booking.py:0
+msgid "Invalid resource combination."
+msgstr ""
+
+#. module: resource_booking
+#: model_terms:ir.ui.view,arch_db:resource_booking.scheduling_calendar
+msgid "Resources:"
+msgstr ""
+
+#. module: resource_booking
+#: model:ir.model.fields,field_description:resource_booking.field_resource_booking__message_has_sms_error
+#: model:ir.model.fields,field_description:resource_booking.field_resource_booking_type__message_has_sms_error
+msgid "SMS Delivery error"
+msgstr ""
+
+#. module: resource_booking
+#. odoo-python
+#: code:addons/resource_booking/controllers/portal.py:0
+#: code:addons/resource_booking/models/resource_booking.py:0
+msgid "The chosen schedule is no longer available."
+msgstr ""

@@ -7,6 +7,7 @@ import calendar
 from datetime import datetime, timedelta
 from datetime import timezone as dt_timezone
 
+from babel.dates import format_date
 from dateutil.relativedelta import relativedelta
 from pytz import timezone
 
@@ -517,6 +518,7 @@ class ResourceBooking(models.Model):
             "res_lang": lang,
             "slots": slots,
             "start": start,
+            "month_label": format_date(start.date(), "MMMM yyyy", locale=lang.code),
             "weekday_names": weekday_names,
             "selected_combination": combination,
         }

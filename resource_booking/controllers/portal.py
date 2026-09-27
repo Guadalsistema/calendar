@@ -2,6 +2,8 @@
 # Copyright 2022 Tecnativa - Pedro M. Baeza
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+from urllib.parse import quote
+
 from dateutil.parser import isoparse
 
 from odoo.exceptions import AccessError, MissingError, ValidationError
@@ -161,7 +163,8 @@ class CustomerPortal(portal.CustomerPortal):
         except ValidationError:
             url = booking_sudo.get_portal_url(
                 suffix=f"/schedule/{when_tz_aware:%Y/%m}",
-                query_string="&error=The chosen schedule is no longer available.",
+                query_string="&error="
+                + quote(request.env._("The chosen schedule is no longer available.")),
             )
             return request.redirect(url)
         return request.redirect(booking_sudo.get_portal_url())
