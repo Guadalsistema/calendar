@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_booking_barber,resource.booking barber read,resource_booking.model_resource_booking,group_barber,1,0,0,0
+access_booking_barbershop_manager,resource.booking manager,resource_booking.model_resource_booking,group_manager,1,1,1,1
+access_event_barber,calendar.event barber read,calendar.model_calendar_event,group_barber,1,0,0,0
+access_event_barbershop_manager,calendar.event manager,calendar.model_calendar_event,group_manager,1,1,1,1
+access_partner_barbershop_manager,res.partner manager,base.model_res_partner,group_manager,1,1,1,1

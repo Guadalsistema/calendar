@@ -1,0 +1,15 @@
+<odoo>
+  <record id="resource_resource_form_location" model="ir.ui.view">
+    <field name="name">resource.resource.form.location</field>
+    <field name="model">resource.resource</field>
+    <field name="inherit_id" ref="resource.resource_resource_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='resource_type']" position="after">
+        <field name="location_partner_id" invisible="resource_type != 'location'" domain="[('type', '=', 'other'), '|', ('company_id', '=', False), ('company_id', '=', company_id)]"/>
+        <field name="partner_latitude" invisible="resource_type != 'location'"/>
+        <field name="partner_longitude" invisible="resource_type != 'location'"/>
+        <field name="image_1920" widget="image" invisible="resource_type != 'location'"/>
+      </xpath>
+    </field>
+  </record>
+</odoo>
