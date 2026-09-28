@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="category_barbershop_booking" model="ir.module.category">
+        <field name="name">Barbershop Booking</field>
+    </record>
+    <record id="group_barber" model="res.groups">
+        <field name="name">Barber</field>
+        <field name="category_id" ref="category_barbershop_booking"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user')), (4, ref('resource_booking.group_user'))]"/>
+    </record>
+    <record id="group_manager" model="res.groups">
+        <field name="name">Barbershop Booking Manager</field>
+        <field name="category_id" ref="category_barbershop_booking"/>
+        <field name="implied_ids" eval="[(4, ref('group_barber')), (4, ref('resource_booking.group_manager'))]"/>
+    </record>
+</odoo>

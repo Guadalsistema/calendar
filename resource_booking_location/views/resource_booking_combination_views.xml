@@ -1,0 +1,12 @@
+<odoo>
+  <record id="resource_booking_combination_form_location" model="ir.ui.view">
+    <field name="name">resource.booking.combination.form.location</field>
+    <field name="model">resource.booking.combination</field>
+    <field name="inherit_id" ref="resource_booking.resource_booking_combination_view_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='resource_ids']" position="attributes">
+        <attribute name="domain">['|', ('resource_type', '!=', 'location'), ('location_partner_id.type', '=', 'other')]</attribute>
+      </xpath>
+    </field>
+  </record>
+</odoo>

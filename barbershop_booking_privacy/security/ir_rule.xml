@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Replace the OCA requester/follower OR rule for barbers, keeping it for other users. -->
+    <function model="ir.model.data" name="write">
+        <function model="ir.model.data" name="search">
+            <value eval="[('module','=','resource_booking'), ('name','=','rule_resource_booking_user')]"/>
+        </function>
+        <value eval="{'noupdate': False}"/>
+    </function>
+    <record id="resource_booking.rule_resource_booking_user" model="ir.rule">
+        <field name="domain_force">( [('combination_id.resource_ids', 'any', [('resource_type','=','user'), ('user_id','=',user.id)])] if user.has_group('barbershop_booking_privacy.group_barber') else ['|', '|', ('partner_ids', 'child_of', user.partner_id.ids), ('message_partner_ids', 'child_of', user.partner_id.ids), ('combination_id.resource_ids.user_id', 'in', user.ids)] )</field>
+    </record>
+    <!-- This global fence intersects calendar's permissive employee rule. -->
+    <record id="rule_booking_event_barber_visibility" model="ir.rule">
+        <field name="name">Booking events: assigned barber only</field>
+        <field name="model_id" ref="calendar.model_calendar_event"/>
+        <field name="global" eval="True"/>
+        <field name="domain_force">( [(1, '=', 1)] if (not user.has_group('base.group_user') or not user.has_group('barbershop_booking_privacy.group_barber') or user.has_group('barbershop_booking_privacy.group_manager')) else ['|', ('resource_booking_ids','=',False), ('resource_booking_ids','not any',[('combination_id.resource_ids','not any',[('resource_type','=','user'),('user_id','=',user.id)])])] )</field>
+    </record>
+    <record id="rule_booking_private_customer_barber" model="ir.rule">
+        <field name="name">Private booking customers: assigned barber only</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="global" eval="True"/>
+        <field name="domain_force">( [(1, '=', 1)] if (not user.has_group('base.group_user') or user.has_group('barbershop_booking_privacy.group_manager') or not user.has_group('barbershop_booking_privacy.group_barber')) else ['|', ('barbershop_private_booking_customer','=',False), ('resource_booking_ids.combination_id.resource_ids','any',[('resource_type','=','user'),('user_id','=',user.id)])] )</field>
+    </record>
+    <!-- mail.followers is a generic model and its default ACL permits direct reads. -->
+    <record id="rule_booking_follower_barber_visibility" model="ir.rule">
+        <field name="name">Booking followers: parent visibility</field>
+        <field name="model_id" ref="mail.model_mail_followers"/>
+        <field name="global" eval="True"/>
+        <field name="domain_force">( [(1, '=', 1)] if (not user.has_group('base.group_user') or not user.has_group('barbershop_booking_privacy.group_barber') or user.has_group('barbershop_booking_privacy.group_manager')) else ['|', '|', '|', ('res_model', 'not in', ['resource.booking', 'calendar.event', 'res.partner']), '&amp;', ('res_model', '=', 'resource.booking'), ('res_id', 'in', user.env['resource.booking'].search([]).ids), '&amp;', ('res_model', '=', 'calendar.event'), ('res_id', 'in', user.env['calendar.event'].search([]).ids), '&amp;', ('res_model', '=', 'res.partner'), ('res_id', 'in', user.env['res.partner'].search([]).ids)] )</field>
+    </record>
+</odoo>
