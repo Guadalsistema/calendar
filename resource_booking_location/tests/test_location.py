@@ -11,12 +11,7 @@ from odoo.addons.resource_booking.models.resource_calendar import (
 from pytz import UTC
 
 
-class TestResourceBookingLocation(TransactionCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        create_test_data(cls)
-
+class ResourceBookingLocationCase(TransactionCase):
     def _location(self, name="Shop", partner=None, **values):
         partner = partner or self.env["res.partner"].create(
             {"name": name, "type": "other", "street": "1 Main Street"}
@@ -30,6 +25,13 @@ class TestResourceBookingLocation(TransactionCase):
         }
         vals.update(values)
         return self.env["resource.resource"].create(vals)
+
+
+class TestResourceBookingLocation(ResourceBookingLocationCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        create_test_data(cls)
 
     def _next_monday(self, hour=8):
         today = datetime.today().date()
@@ -266,3 +268,69 @@ class TestResourceBookingLocation(TransactionCase):
         actual = calendar._calendar_event_busy_intervals(start, stop, resource, -1)
         self.assertTrue(expected._items)
         self.assertEqual(actual._items, expected._items)
+
+
+class TestCombinationAvailabilityCalendar(ResourceBookingLocationCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        create_test_data(cls)
+
+    def test_restricts_worker_days_per_shop(self):
+        shops = self._location("Monday shop") | self._location("Tuesday shop")
+        worker = self.r_users[2]
+        combinations = self.env["resource.booking.combination"].create([
+            {
+                "resource_ids": [Command.set([shop.id, worker.id])],
+                "availability_calendar_id": self.r_calendars[index].id,
+            }
+            for index, shop in enumerate(shops)
+        ])
+        booking = self.env["resource.booking"].new({"type_id": self.rbt.id})
+        monday = UTC.localize(datetime(2099, 1, 5, 8))
+        tuesday = monday + timedelta(days=1)
+
+        self.assertTrue(booking._get_intervals(
+            monday, monday + timedelta(hours=1), combinations[0]
+        ))
+        self.assertFalse(booking._get_intervals(
+            tuesday, tuesday + timedelta(hours=1), combinations[0]
+        ))
+        self.assertFalse(booking._get_intervals(
+            monday, monday + timedelta(hours=1), combinations[1]
+        ))
+        self.assertTrue(booking._get_intervals(
+            tuesday, tuesday + timedelta(hours=1), combinations[1]
+        ))
+
+    def test_calendar_change_cannot_invalidate_confirmed_booking(self):
+        availability = self.env["resource.calendar"].create({
+            "name": "Monday shop assignment",
+            "tz": "UTC",
+            "attendance_ids": [Command.create({
+                "name": "Monday", "dayofweek": "0", "hour_from": 8,
+                "hour_to": 18, "day_period": "morning",
+            })],
+        })
+        combination = self.env["resource.booking.combination"].create({
+            "resource_ids": [Command.set([
+                self._location("Scheduled shop").id, self.r_users[2].id
+            ])],
+            "availability_calendar_id": availability.id,
+        })
+        booking = self.env["resource.booking"].create({
+            "partner_ids": [Command.link(self.partner.id)],
+            "type_id": self.rbt.id,
+            "combination_id": combination.id,
+            "combination_auto_assign": False,
+            "start": "2099-01-05 08:00:00",
+            "duration": 1,
+        })
+        booking.action_confirm()
+
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            availability.write({
+                "attendance_ids": [Command.update(
+                    availability.attendance_ids.id, {"hour_from": 10}
+                )]
+            })
