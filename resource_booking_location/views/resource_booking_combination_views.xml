@@ -7,6 +7,9 @@
       <xpath expr="//field[@name='resource_ids']" position="attributes">
         <attribute name="domain">['|', ('resource_type', '!=', 'location'), ('location_partner_id.type', '=', 'other')]</attribute>
       </xpath>
+      <xpath expr="//field[@name='forced_calendar_id']" position="after">
+        <field name="availability_calendar_id"/>
+      </xpath>
     </field>
   </record>
 </odoo>
