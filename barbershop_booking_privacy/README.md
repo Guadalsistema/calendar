@@ -14,6 +14,10 @@ resource-booking token and partner rules. Chatter messages, followers and
 attachments are checked against parent-record visibility; attendees remain
 protected through the booking-event rule. Integrations that bypass ORM access
 checks or introduce alternate data paths still require an independent audit.
+Portal cancel and reschedule actions are hidden for barbers. Mutating portal
+routes use normal record access for authenticated internal users so the model's
+read-only guard remains effective; portal and public customer token flows retain
+the upstream elevated access.
 
 ## Generic shop-choice API
 

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="resource_booking_portal_form" inherit_id="resource_booking.resource_booking_portal_form">
+        <xpath expr="//t[@t-if=&quot;booking_sudo.is_modifiable and booking_sudo.state in {'scheduled', 'confirmed'}&quot;]" position="attributes">
+            <attribute name="t-if">barbershop_portal_can_modify and booking_sudo.is_modifiable and booking_sudo.state in {'scheduled', 'confirmed'}</attribute>
+        </xpath>
+        <xpath expr="//t[@t-if=&quot;booking_sudo.is_modifiable and booking_sudo.state != 'canceled'&quot;]" position="attributes">
+            <attribute name="t-if">barbershop_portal_can_modify and booking_sudo.is_modifiable and booking_sudo.state != 'canceled'</attribute>
+        </xpath>
+        <xpath expr="//div[@id='modal_cancel']" position="attributes">
+            <attribute name="t-if">barbershop_portal_can_modify</attribute>
+        </xpath>
+    </template>
+</odoo>
