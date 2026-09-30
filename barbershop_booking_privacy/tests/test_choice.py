@@ -86,6 +86,16 @@ class TestBookingChoice(TransactionCase):
         self.assertEqual(set(result), set(choices.ids))
         self.assertTrue(all(isinstance(value, dict) for value in result.values()))
 
+    def test_contact_email_is_optional_but_validated_when_present(self):
+        self.assertEqual(
+            self.api._validated_contact({"name": "  Choice ", "phone": " 123 "}),
+            {"name": "Choice", "email": "", "phone": "123"},
+        )
+        with self.assertRaises(ValidationError):
+            self.api._validated_contact({
+                "name": "Choice", "email": "invalid", "phone": "123",
+            })
+
     def test_confirmation_rejects_before_partner_creation_and_confirms_manual_choice(self):
         combo = self.env["resource.booking.combination"].create({
             "resource_ids": [Command.set([self.r_materials[0].id])],

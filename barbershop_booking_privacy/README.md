@@ -3,9 +3,10 @@
 This module narrows internal barber access to booking records whose selected
 combination contains a user resource owned by that barber. Booking-related
 calendar events are similarly restricted while unrelated calendar events
-remain subject to Odoo's normal calendar rules. A partner must be explicitly
-marked as a private booking customer before the customer-specific fence applies;
-ordinary partners are not narrowed by this module.
+remain subject to Odoo's normal calendar rules. Barbers can read only their own
+partner, their companies' partners, and customers on bookings assigned to them.
+This visibility fence applies to ordinary and private customers; the private
+customer marker additionally prevents barbers from modifying customer details.
 
 Managers inherit the resource-booking manager role and retain full booking and
 calendar-event CRUD. Portal and public users remain subject to the upstream
@@ -30,6 +31,7 @@ has parameters `(company_id, type_id, mode=None, location_id=None,
 combination_id=None, when=None, contact=None)`. A false combination selects
 the first currently free candidate deterministically; otherwise the supplied
 combination must be eligible. `when` must be timezone-aware. `contact` requires
-`name`, `email`, and `phone`. Call confirmation within the caller's transaction
+`name` and `phone`; `email` is optional but validated when provided. Call
+confirmation within the caller's transaction
 or savepoint; the method locks resources, revalidates, then creates the private
 customer and confirmed booking atomically.

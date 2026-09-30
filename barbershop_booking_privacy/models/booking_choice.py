@@ -76,10 +76,12 @@ class BookingChoice(models.AbstractModel):
         name = " ".join(str(contact.get("name") or "").split())
         email = str(contact.get("email") or "").strip().lower()
         phone = " ".join(str(contact.get("phone") or "").split())
-        if (not name or len(name) > 200 or not email or len(email) > 254
-                or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email)
+        if (not name or len(name) > 200 or len(email) > 254
+                or (email and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email))
                 or not phone or len(phone) > 64):
-            raise ValidationError(_("Valid name, email, and phone are required."))
+            raise ValidationError(
+                _("Valid name and phone are required; email must be valid when provided.")
+            )
         return {"name": name, "email": email, "phone": phone}
 
     @api.model

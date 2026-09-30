@@ -18,10 +18,10 @@
         <field name="domain_force">( [(1, '=', 1)] if (not user.has_group('base.group_user') or not user.has_group('barbershop_booking_privacy.group_barber') or user.has_group('barbershop_booking_privacy.group_manager')) else ['|', ('resource_booking_ids','=',False), ('resource_booking_ids','not any',[('combination_id.resource_ids','not any',[('resource_type','=','user'),('user_id','=',user.id)])])] )</field>
     </record>
     <record id="rule_booking_private_customer_barber" model="ir.rule">
-        <field name="name">Private booking customers: assigned barber only</field>
+        <field name="name">Barber contacts: assigned customers only</field>
         <field name="model_id" ref="base.model_res_partner"/>
         <field name="global" eval="True"/>
-        <field name="domain_force">( [(1, '=', 1)] if (not user.has_group('base.group_user') or user.has_group('barbershop_booking_privacy.group_manager') or not user.has_group('barbershop_booking_privacy.group_barber')) else ['|', ('barbershop_private_booking_customer','=',False), ('resource_booking_ids.combination_id.resource_ids','any',[('resource_type','=','user'),('user_id','=',user.id)])] )</field>
+        <field name="domain_force">( [(1, '=', 1)] if (not user.has_group('base.group_user') or user.has_group('barbershop_booking_privacy.group_manager') or not user.has_group('barbershop_booking_privacy.group_barber')) else ['|', '|', ('id', '=', user.partner_id.id), ('id', 'in', user.company_ids.partner_id.ids), ('resource_booking_ids.combination_id.resource_ids', 'any', [('resource_type', '=', 'user'), ('user_id', '=', user.id)])] )</field>
     </record>
     <!-- mail.followers is a generic model and its default ACL permits direct reads. -->
     <record id="rule_booking_follower_barber_visibility" model="ir.rule">

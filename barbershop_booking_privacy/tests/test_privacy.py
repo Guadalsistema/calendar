@@ -180,7 +180,13 @@ class TestBookingPrivacy(TransactionCase):
         self.assertTrue(Partner.read_group([("id", "=", self.private_a.id)], ["company_id"], ["company_id"]))
         self.assertEqual(Partner.browse(self.private_shared.id).name, "Shared private customer")
         self._assert_hidden("res.partner", self.private_b)
-        Partner.browse(self.ordinary.id).write({"name": "Ordinary edited"})
+        self._assert_hidden("res.partner", self.ordinary)
+        self._assert_hidden("res.partner", self.barbers[1].partner_id)
+        self.assertEqual(Partner.browse(self.barbers[0].partner_id.id).name, self.barbers[0].name)
+        self.assertEqual(
+            Partner.browse(self.barbers[0].company_id.partner_id.id).name,
+            self.barbers[0].company_id.name,
+        )
         with self.assertRaises(AccessError):
             Partner.browse(self.private_a.id).write({"name": "Private changed"})
         with self.assertRaises(AccessError):
@@ -189,6 +195,13 @@ class TestBookingPrivacy(TransactionCase):
                          "Shared private customer")
         third = self.env["res.partner"].with_user(self.barbers[2])
         self.assertFalse(third.search_count([("id", "=", self.private_shared.id)]))
+        self.assertEqual(third.browse(self.ordinary.id).name, "Ordinary customer")
+        third.browse(self.ordinary.id).write({"name": "Ordinary edited"})
+        manager = self.env["res.partner"].with_user(self.manager)
+        self.assertEqual(
+            manager.search_count([("id", "in", (self.private_b | self.ordinary).ids)]),
+            2,
+        )
 
     def test_barber_booking_write_create_unlink_and_manager_crud(self):
         booking = self.bookings[0].with_user(self.barbers[0])
