@@ -12,7 +12,11 @@ class CalendarEvent(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
-        if vals.get("resource_booking_ids") or self.sudo().filtered("resource_booking_ids"):
+        booking_sync = self.env.su and self.env.context.get("syncing_booking_ids")
+        if not booking_sync and (
+            vals.get("resource_booking_ids")
+            or self.sudo().filtered("resource_booking_ids")
+        ):
             self._check_barber_read_only()
         return super().write(vals)
 

@@ -11,8 +11,29 @@ class ResourceBooking(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
-        self._check_barber_read_only()
+        technical_write = self.env.su and (
+            set(vals) == {"access_token"}
+            or (
+                self.env.context.get("syncing_booking_ids")
+                and set(vals) == {"meeting_id"}
+            )
+        )
+        if not technical_write:
+            self._check_barber_read_only()
         return super().write(vals)
+
+    def message_post(self, *args, **kwargs):
+        user = self.env.user
+        if user.has_group(
+            "barbershop_booking_privacy.group_barber"
+        ) and not user.has_group("barbershop_booking_privacy.group_manager"):
+            self.check_access("read")
+            recipient_ids = set(kwargs.get("partner_ids", ()))
+            if recipient_ids - set(self.partner_ids.ids):
+                raise AccessError(
+                    self.env._("Barbers can only message this booking's customers.")
+                )
+        return super().message_post(*args, **kwargs)
 
     def unlink(self):
         self._check_barber_read_only()

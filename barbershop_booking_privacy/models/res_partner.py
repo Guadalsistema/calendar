@@ -17,8 +17,10 @@ class ResPartner(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
-        if "barbershop_private_booking_customer" in vals or self.filtered(
-            "barbershop_private_booking_customer"
+        technical_signup_write = self.env.su and set(vals) == {"signup_type"}
+        if not technical_signup_write and (
+            "barbershop_private_booking_customer" in vals
+            or self.filtered("barbershop_private_booking_customer")
         ):
             self._check_barber_private_customer_write([vals])
         return super().write(vals)

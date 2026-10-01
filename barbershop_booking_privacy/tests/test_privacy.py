@@ -23,7 +23,11 @@ class TestBookingPrivacy(TransactionCase):
         cls.BarberGroup = cls.env.ref("barbershop_booking_privacy.group_barber")
         cls.ManagerGroup = cls.env.ref("barbershop_booking_privacy.group_manager")
         cls.barbers = cls.env["res.users"].create([
-            {"name": f"Privacy barber {n}", "login": f"privacy_barber_{n}"}
+            {
+                "name": f"Privacy barber {n}",
+                "login": f"privacy_barber_{n}",
+                "email": f"privacy_barber_{n}@example.test",
+            }
             for n in range(3)
         ])
         cls.barbers.write({"groups_id": [Command.link(cls.BarberGroup.id)]})
@@ -58,7 +62,9 @@ class TestBookingPrivacy(TransactionCase):
         ]
         Partner = cls.env["res.partner"]
         cls.private_a = Partner.create({
-            "name": "Private A", "barbershop_private_booking_customer": True,
+            "name": "Private A",
+            "email": "private-a@example.test",
+            "barbershop_private_booking_customer": True,
         })
         cls.private_b = Partner.create({
             "name": "Private B", "barbershop_private_booking_customer": True,
@@ -191,6 +197,8 @@ class TestBookingPrivacy(TransactionCase):
             Partner.browse(self.private_a.id).write({"name": "Private changed"})
         with self.assertRaises(AccessError):
             Partner.browse(self.private_a.id).write({"barbershop_private_booking_customer": False})
+        with self.assertRaises(AccessError):
+            Partner.browse(self.private_a.id).write({"signup_type": "signup"})
         self.assertEqual(self.env["res.partner"].with_user(self.barbers[1]).browse(self.private_shared.id).name,
                          "Shared private customer")
         third = self.env["res.partner"].with_user(self.barbers[2])
@@ -210,6 +218,7 @@ class TestBookingPrivacy(TransactionCase):
             {"partner_ids": [Command.clear()]},
             {"combination_id": self.combinations[1].id},
             {"start": "2021-03-01 12:00:00"},
+            {"access_token": "barber-controlled-token"},
         ):
             with self.assertRaises(AccessError):
                 booking.write(vals)
@@ -242,6 +251,62 @@ class TestBookingPrivacy(TransactionCase):
         for action in ("action_confirm", "action_unschedule", "action_cancel"):
             with self.subTest(action=action), self.assertRaises(AccessError):
                 getattr(booking, action)()
+
+    def test_barber_can_message_assigned_booking_customers(self):
+        # Verify an assigned barber can send a customer-visible chatter message.
+        booking = self.bookings[0].with_user(self.barbers[0])
+        message = booking.message_post(
+            body="Your barber is ready.",
+            message_type="comment",
+            subtype_xmlid="mail.mt_comment",
+            partner_ids=self.private_a.ids,
+        )
+        self.assertEqual(message.author_id, self.barbers[0].partner_id)
+        self.assertIn(self.private_a, message.partner_ids)
+        self.assertTrue(booking.access_token)
+
+    def test_barber_cannot_message_unassigned_booking(self):
+        # Verify booking record rules also protect the chatter posting endpoint.
+        with self.assertRaises(AccessError):
+            self.bookings[1].with_user(self.barbers[0]).message_post(
+                body="Unauthorized message",
+                message_type="comment",
+                subtype_xmlid="mail.mt_comment",
+                partner_ids=self.private_b.ids,
+            )
+
+    def test_barber_cannot_message_unrelated_customer(self):
+        # Verify a barber cannot target a hidden customer from an assigned booking.
+        with self.assertRaises(AccessError):
+            self.bookings[0].with_user(self.barbers[0]).message_post(
+                body="Unauthorized recipient",
+                message_type="comment",
+                subtype_xmlid="mail.mt_comment",
+                partner_ids=self.private_b.ids,
+            )
+
+    def test_barber_can_message_canceled_assigned_booking(self):
+        # Verify cancellation does not close the customer communication channel.
+        self.bookings[0].action_cancel()
+        booking = self.bookings[0].with_user(self.barbers[0])
+        message = booking.message_post(
+            body="Your canceled appointment has been noted.",
+            message_type="comment",
+            subtype_xmlid="mail.mt_comment",
+            partner_ids=self.private_a.ids,
+        )
+        self.assertEqual(message.author_id, self.barbers[0].partner_id)
+        self.assertIn(self.private_a, message.partner_ids)
+
+    def test_barber_cannot_spoof_booking_sync_context(self):
+        # Verify client-supplied sync context cannot unlock booking or event writes.
+        booking = self.bookings[0].with_user(self.barbers[0]).with_context(
+            syncing_booking_ids=self.bookings[0].ids
+        )
+        with self.assertRaises(AccessError):
+            booking.write({"meeting_id": self.bookings[0].meeting_id.id})
+        with self.assertRaises(AccessError):
+            booking.meeting_id.write({"name": "Spoofed sync edit"})
 
     def test_mixed_booking_event_is_hidden_from_each_assigned_barber(self):
         own, coworker = self.bookings[:2]
@@ -287,6 +352,7 @@ class TestBookingPrivacy(TransactionCase):
         self.assertTrue(intervals, "Hidden booking event must still block its shared resource")
 
     def test_chatter_followers_and_attachments_are_not_exposed(self):
+        # Verify an unassigned barber cannot read coworker chatter metadata or files.
         booking = self.bookings[1]
         message = self.env["mail.message"].create({
             "model": "resource.booking",
