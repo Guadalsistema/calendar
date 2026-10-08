@@ -2,8 +2,6 @@
 # Copyright 2022 Tecnativa - Pedro M. Baeza
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from urllib.parse import quote
-
 from dateutil.parser import isoparse
 
 from odoo.exceptions import AccessError, MissingError, ValidationError
