@@ -174,6 +174,8 @@ class BookingChoice(models.AbstractModel):
         start = when.astimezone(timezone.utc).replace(tzinfo=None)
         partner = self.env["res.partner"].create({
             **values,
+            "lang": self.env.context.get("lang") or self.env.user.lang,
+            "tz": booking_type.resource_calendar_id.tz,
             "barbershop_private_booking_customer": True,
         })
         booking = self.env["resource.booking"].create({

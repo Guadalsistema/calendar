@@ -117,13 +117,15 @@ class TestBookingChoice(TransactionCase):
         day = datetime.today().date()
         day += timedelta(days=(7 - day.weekday()) % 7 or 7)
         when = UTC.localize(datetime.combine(day, datetime.min.time()).replace(hour=10))
-        booking = self.api.confirm_booking(
+        self.env["res.lang"]._activate_lang("es_ES")
+        booking = self.api.with_context(lang="es_ES").confirm_booking(
             self.env.company.id, service.id, "independent", combination_id=combo.id,
             when=when, contact=values,
         )
         self.assertEqual(booking.combination_id, combo)
         self.assertFalse(booking.combination_auto_assign)
         self.assertTrue(booking.partner_ids.barbershop_private_booking_customer)
+        self.assertEqual(booking.partner_ids.lang, "es_ES")
         self.assertTrue(booking.get_portal_url())
 
     def test_any_available_selects_deterministically_and_exact_mismatch_fails(self):
@@ -222,6 +224,37 @@ class TestBookingChoice(TransactionCase):
             )
         self.assertFalse(self.env["res.partner"].search_count(partner_domain))
         self.assertEqual(self.env["resource.booking"].search_count([("type_id", "=", service.id)]), booking_count)
+
+    def test_customer_and_reminder_timezone_follow_service_calendar(self):
+        day = datetime.today().date()
+        day += timedelta(days=(7 - day.weekday()) % 7 or 7)
+        for tz in ("America/Bogota", "America/Los_Angeles"):
+            with self.subTest(tz=tz):
+                calendar = self.r_calendars[2].copy({"name": tz, "tz": tz})
+                shop = self._location(tz, calendar=calendar, tz=tz)
+                combo = self.env["resource.booking.combination"].create({
+                    "resource_ids": [Command.set([shop.id])],
+                })
+                service = self._service(combo)
+                service.resource_calendar_id = calendar
+                start = timezone(tz).localize(datetime.combine(day, datetime.min.time()))
+                slots = self.api.available_slots(
+                    self.env.company.id, service.id, "location", shop.id,
+                    start_dt=start, end_dt=start + timedelta(days=1),
+                )[combo.id]
+                starts = [slot for date_slots in slots.values() for slot in date_slots]
+                self.assertTrue(starts)
+                booking = self.api.confirm_booking(
+                    self.env.company.id, service.id, "location", shop.id, combo.id,
+                    starts[0], {"name": "Customer", "email": "customer@example.org", "phone": "123"},
+                )
+                customer = booking.partner_ids
+                self.assertEqual(customer.tz, tz)
+                attendee = booking.meeting_id.attendee_ids.filtered(
+                    lambda item: item.partner_id == customer
+                )
+                self.assertEqual(len(attendee), 1)
+                self.assertEqual(attendee.mail_tz, tz)
 
     def test_non_utc_slots_obey_work_hours_and_location_leave(self):
         calendar = self.r_calendars[2].copy({"name": "Choice Los Angeles", "tz": "America/Los_Angeles"})
