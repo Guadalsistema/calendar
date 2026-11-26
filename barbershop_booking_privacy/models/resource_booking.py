@@ -5,6 +5,14 @@ from odoo.exceptions import AccessError
 class ResourceBooking(models.Model):
     _inherit = "resource.booking"
 
+    def _prepare_meeting_vals(self):
+        values = super()._prepare_meeting_vals()
+        # Calendar sends a date-change email whenever start is written, even if
+        # its value is unchanged during a routine booking synchronization.
+        if self.meeting_id and self.meeting_id.start == values.get("start"):
+            values.pop("start", None)
+        return values
+
     @api.model_create_multi
     def create(self, vals_list):
         self._check_barber_read_only()

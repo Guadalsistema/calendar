@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 from odoo import Command, fields
 from odoo.exceptions import ValidationError
@@ -224,6 +225,36 @@ class TestBookingChoice(TransactionCase):
             )
         self.assertFalse(self.env["res.partner"].search_count(partner_domain))
         self.assertEqual(self.env["resource.booking"].search_count([("type_id", "=", service.id)]), booking_count)
+
+    def test_date_change_email_only_when_booking_is_rescheduled(self):
+        combo = self.env["resource.booking.combination"].create({
+            "resource_ids": [Command.set([self.r_materials[0].id])],
+        })
+        service = self._service(combo)
+        day = datetime.today().date()
+        day += timedelta(days=(7 - day.weekday()) % 7 or 7)
+        start = timezone(service.resource_calendar_id.tz).localize(
+            datetime.combine(day, datetime.min.time())
+        )
+        slots = self.api.available_slots(
+            self.env.company.id, service.id, "independent", combination_id=combo.id,
+            start_dt=start, end_dt=start + timedelta(days=1),
+        )[combo.id]
+        starts = [slot for date_slots in slots.values() for slot in date_slots]
+        self.assertGreaterEqual(len(starts), 2)
+        attendee_model = type(self.env["calendar.attendee"])
+        change_template = self.env.ref("calendar.calendar_template_meeting_changedate")
+        with patch.object(attendee_model, "_send_mail_to_attendees", autospec=True) as send:
+            booking = self.api.confirm_booking(
+                self.env.company.id, service.id, "independent", combination_id=combo.id,
+                when=starts[0], contact={"name": "Customer", "email": "customer@example.org", "phone": "123"},
+            )
+            booking.get_portal_url()
+            booking._sync_meeting()
+            self.assertNotIn(change_template, [call.args[1] for call in send.call_args_list])
+            send.reset_mock()
+            booking.write({"start": starts[1].astimezone(UTC).replace(tzinfo=None)})
+            self.assertIn(change_template, [call.args[1] for call in send.call_args_list])
 
     def test_customer_and_reminder_timezone_follow_service_calendar(self):
         day = datetime.today().date()
